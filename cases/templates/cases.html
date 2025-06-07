@@ -1,0 +1,82 @@
+{% extends "base.html" %}
+
+{% block content %}
+
+<h1>Create a Case</h1>
+<form method="post" action="{% url 'create_case' %}">
+    {% csrf_token %}
+    {{ form.as_p }}
+    <button type="submit">Create</button>
+</form>
+
+{% if error %}
+<hr>
+<div class="alert alert-danger" role="alert">
+    {{ error }}
+</div>
+<hr>
+{% endif %}
+
+<h1>All Cases</h1>
+<div class="mb-3">
+    <button type="button" id="edit-btn" class="btn btn-primary" disabled>Edit</button>
+    <button type="button" id="delete-btn" class="btn btn-danger" disabled>Delete</button>
+</div>
+<div style="max-height: 400px; overflow-y: auto; border: 1px solid #dee2e6; border-radius: 0.25rem;">
+    <form id="cases-form">
+        <table class="table table-striped mb-0">
+            <thead>
+                <tr>
+                    <th>
+                        <input type="checkbox" id="select-all">
+                    </th>
+                    <th>Name</th>
+                    <th>Price</th>
+                    <th>Hash Search</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for case in cases %}
+                    <tr>
+                        <td>
+                            <input type="checkbox" name="selected_cases" value="{{ case.id }}">
+                        </td>
+                        <td>{{ case.name }}</td>
+                        <td>${{ case.price }}</td>
+                        <td>{{ case.hash_search }}</td>
+                    </tr>
+                {% empty %}
+                    <tr>
+                        <td colspan="4">No cases found.</td>
+                    </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </form>
+</div>
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    const checkboxes = document.querySelectorAll('input[name="selected_cases"]');
+    const selectAll = document.getElementById('select-all');
+    const editBtn = document.getElementById('edit-btn');
+    const deleteBtn = document.getElementById('delete-btn');
+
+    function updateButtons() {
+        const anyChecked = Array.from(checkboxes).some(cb => cb.checked);
+        editBtn.disabled = !anyChecked || Array.from(checkboxes).filter(cb => cb.checked).length !== 1;
+        deleteBtn.disabled = !anyChecked;
+    }
+
+    checkboxes.forEach(cb => {
+        cb.addEventListener('change', updateButtons);
+    });
+
+    selectAll.addEventListener('change', function() {
+        checkboxes.forEach(cb => cb.checked = selectAll.checked);
+        updateButtons();
+    });
+});
+</script>
+
+{% endblock %}
