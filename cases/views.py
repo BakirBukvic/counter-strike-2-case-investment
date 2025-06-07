@@ -4,6 +4,7 @@ from django.views.generic import ListView
 from django.db import IntegrityError
 from django.shortcuts import render, redirect
 
+from django.views.decorators.http import require_POST
 
 
 
@@ -44,32 +45,33 @@ def create_case(request):
     # For GET or any other case, just redirect to the cases list
     return redirect('case_list')
 
+@require_POST
+def delete_case_or_cases(request):
+    ids = request.POST.getlist('selected_cases')
+    if ids:
+        CurrentCase.objects.filter(id__in=ids).delete()
+    return redirect('case_list')
 
-def delete_case_or_cases(request, case_id=None):
-    if case_id:
+from django.shortcuts import get_object_or_404
+
+from django.views.decorators.csrf import csrf_exempt
+from django.http import JsonResponse
+import json
+
+@csrf_exempt
+def edit_case_inline(request, case_id):
+    if request.method == 'POST':
         try:
+            data = json.loads(request.body)
             case = CurrentCase.objects.get(id=case_id)
-            case.delete()
-        except CurrentCase.DoesNotExist:
-            pass  # Handle the case where the case does not exist
-    else:
-        CurrentCase.objects.all().delete()  # Delete all cases if no specific case is provided
-    return redirect('case_list')  # Redirect to the case list after deletion
-
-
-def update_case_or_cases(request, case_id=None):
-    if case_id:
-        try:
-            case = CurrentCase.objects.get(id=case_id)
-            form = CurrentCaseForm(request.POST or None, instance=case)
-            if form.is_valid():
-                form.save()
-                return redirect('case_list')
-        except CurrentCase.DoesNotExist:
-            pass  # Handle the case where the case does not exist
-    else:
-        # If no specific case is provided, just redirect to the case list
-        return redirect('case_list')
-    
-    # Render the form for updating the case
-    return render(request, 'update_case.html', {'form': form})
+            if 'name' in data:
+                case.name = data['name']
+            if 'price' in data:
+                case.price = data['price']
+            if 'hash_search' in data:
+                case.hash_search = data['hash_search']
+            case.save()
+            return JsonResponse({'success': True})
+        except Exception as e:
+            return JsonResponse({'success': False, 'error': str(e)})
+    return JsonResponse({'success': False, 'error': 'Invalid request'})

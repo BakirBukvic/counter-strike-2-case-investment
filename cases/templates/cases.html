@@ -18,12 +18,13 @@
 {% endif %}
 
 <h1>All Cases</h1>
-<div class="mb-3">
-    <button type="button" id="edit-btn" class="btn btn-primary" disabled>Edit</button>
-    <button type="button" id="delete-btn" class="btn btn-danger" disabled>Delete</button>
-</div>
-<div style="max-height: 400px; overflow-y: auto; border: 1px solid #dee2e6; border-radius: 0.25rem;">
-    <form id="cases-form">
+<form id="cases-form" method="post" action="{% url 'delete_cases' %}">
+    {% csrf_token %}
+    <div class="mb-3">
+        <button type="button" id="edit-btn" class="btn btn-primary" disabled>Edit</button>
+        <button type="submit" id="delete-btn" class="btn btn-danger" disabled>Delete</button>
+    </div>
+    <div style="max-height: 400px; overflow-y: auto; border: 1px solid #dee2e6; border-radius: 0.25rem;">
         <table class="table table-striped mb-0">
             <thead>
                 <tr>
@@ -52,8 +53,8 @@
                 {% endfor %}
             </tbody>
         </table>
-    </form>
-</div>
+    </div>
+</form>
 
 <script>
 document.addEventListener('DOMContentLoaded', function() {
@@ -61,11 +62,12 @@ document.addEventListener('DOMContentLoaded', function() {
     const selectAll = document.getElementById('select-all');
     const editBtn = document.getElementById('edit-btn');
     const deleteBtn = document.getElementById('delete-btn');
+    const form = document.getElementById('cases-form');
 
     function updateButtons() {
-        const anyChecked = Array.from(checkboxes).some(cb => cb.checked);
-        editBtn.disabled = !anyChecked || Array.from(checkboxes).filter(cb => cb.checked).length !== 1;
-        deleteBtn.disabled = !anyChecked;
+        const checked = Array.from(checkboxes).filter(cb => cb.checked);
+        editBtn.disabled = checked.length === 0;
+        deleteBtn.disabled = checked.length === 0;
     }
 
     checkboxes.forEach(cb => {
@@ -76,7 +78,19 @@ document.addEventListener('DOMContentLoaded', function() {
         checkboxes.forEach(cb => cb.checked = selectAll.checked);
         updateButtons();
     });
+
+    form.addEventListener('submit', function(e) {
+        if (event.submitter === deleteBtn) {
+            if (!confirm('Are you sure you want to delete the selected case(s)?')) {
+                e.preventDefault();
+            }
+        }
+    });
 });
+
+
+
+
 </script>
 
 {% endblock %}
