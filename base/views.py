@@ -4,8 +4,6 @@ from django.shortcuts import render
 
 
 def base(request):
-    form = CurrentCaseForm()
-   
     return render(request, 'base.html', {'form': form})
 
 

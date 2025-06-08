@@ -1,10 +1,63 @@
-from .forms import CurrentCaseForm
-from base.models import CurrentCase
+from .forms import CurrentCaseForm, UserInventoryForm
+from base.models import CurrentCase, UserInventory
 from django.views.generic import ListView
 from django.db import IntegrityError
 from django.shortcuts import render, redirect
 
 from django.views.decorators.http import require_POST
+import requests
+import urllib.parse
+
+from django.views.decorators.http import require_POST
+from django.urls import reverse
+
+from django.utils import timezone
+from datetime import date
+
+def update_all_case_prices_if_needed():
+    today = date.today()
+    cases = CurrentCase.objects.all()
+    needs_update = cases.filter(last_price_update__date__lt=today).exists()
+    if needs_update:
+        for case in cases:
+            new_price = fetch_steam_price(case.name)
+            if new_price:
+                case.price = new_price
+                case.save()
+
+
+
+def fetch_steam_price(item_name):
+    encoded_name = urllib.parse.quote(item_name)
+    url = f"https://steamcommunity.com/market/priceoverview/?appid=730&currency=1&market_hash_name={encoded_name}"
+    response = requests.get(url)
+    if response.status_code == 200:
+        data = response.json()
+        if data.get('success'):
+            # Extract the lowest price, remove currency symbol, and convert to float
+            lowest_price = data.get('lowest_price', '0').replace('$', '').replace(' USD', '').replace(',', '').strip()
+            try:
+                return float(lowest_price)
+            except Exception:
+                return 0.0
+        else:
+            return 0.0
+    else:
+        return 0.0
+
+
+class InventoryListView(ListView):
+    model = UserInventory
+    template_name = 'user_inventory.html'
+    context_object_name = 'inventory'
+
+    def get_queryset(self):
+        return UserInventory.objects.all()
+
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        context['form'] = UserInventoryForm()
+        return context
 
 
 
@@ -14,12 +67,29 @@ class CaseListView(ListView):
     context_object_name = 'cases'
 
     def get_queryset(self):
+        # Update prices if needed before returning queryset
+        update_all_case_prices_if_needed()
         return CurrentCase.objects.all().order_by('name')
 
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
         context['form'] = CurrentCaseForm()
         return context
+
+
+@require_POST
+def add_user_inventory(request):
+    form = UserInventoryForm(request.POST)
+    if form.is_valid():
+        form.save()
+        return redirect(reverse('user_inventory'))
+    # If invalid, re-render the inventory list with errors
+    inventory = UserInventory.objects.all()
+    return render(request, 'user_inventory.html', {
+        'form': form,
+        'inventory': inventory,
+    })
+
 
 
 def create_case(request):
@@ -29,20 +99,18 @@ def create_case(request):
         if form.is_valid():
             name = form.cleaned_data['name']
             hash_search = form.cleaned_data['hash_search']
-            price = 10.00  # Mimic API call
+            price = fetch_steam_price(name)  # Fetch price from Steam
             try:
                 CurrentCase.objects.create(name=name, hash_search=hash_search, price=price)
                 return redirect('case_list')
             except IntegrityError:
                 error = "Name and hash search must be unique."
-                # Show the cases page with the error
                 cases = CurrentCase.objects.all().order_by('name')
                 return render(request, 'cases.html', {
                     'form': form,
                     'cases': cases,
                     'error': error
                 })
-    # For GET or any other case, just redirect to the cases list
     return redirect('case_list')
 
 @require_POST
@@ -58,20 +126,34 @@ from django.views.decorators.csrf import csrf_exempt
 from django.http import JsonResponse
 import json
 
+from django.views.decorators.csrf import csrf_exempt
+from django.http import JsonResponse
+import json
+
+from django.views.decorators.csrf import csrf_exempt
+from django.http import JsonResponse
+import json
 @csrf_exempt
 def edit_case_inline(request, case_id):
     if request.method == 'POST':
         try:
             data = json.loads(request.body)
+            field = data.get('field')
+            value = data.get('value')
+            if field not in ['name', 'hash_search']:
+                return JsonResponse({'success': False, 'error': 'Invalid field'})
             case = CurrentCase.objects.get(id=case_id)
-            if 'name' in data:
-                case.name = data['name']
-            if 'price' in data:
-                case.price = data['price']
-            if 'hash_search' in data:
-                case.hash_search = data['hash_search']
-            case.save()
+            setattr(case, field, value)
+            # If the name is updated, fetch the new price
+            if field == 'name':
+                case.price = fetch_steam_price(value)
+            try:
+                case.save()
+            except IntegrityError:
+                return JsonResponse({'success': False, 'error': f'{field.capitalize()} must be unique.'})
             return JsonResponse({'success': True})
         except Exception as e:
             return JsonResponse({'success': False, 'error': str(e)})
     return JsonResponse({'success': False, 'error': 'Invalid request'})
+
+

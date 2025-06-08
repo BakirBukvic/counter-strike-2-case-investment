@@ -1,0 +1,236 @@
+{% extends "base.html" %}
+
+{% block content %}
+<style>
+    body {
+        background: #181818 !important;
+    }
+    .inventory-header {
+        letter-spacing: 2px;
+        font-size: 2.5rem;
+        color: #fff;
+        margin-bottom: 2rem;
+        font-family: 'Segoe UI', 'Arial', sans-serif;
+        text-shadow: 0 2px 8px #0002;
+    }
+    .inventory-form-card {
+        border-radius: 1rem;
+        box-shadow: 0 4px 24px rgba(0,0,0,0.18);
+        border: none;
+        background: #232323;
+        color: #fff;
+    }
+    .inventory-form-card .card-header {
+        border-radius: 1rem 1rem 0 0;
+        background: linear-gradient(90deg, #232323 60%, #444 100%);
+        color: #fff;
+        border-bottom: 1px solid #333;
+    }
+    .inventory-form-card .btn-success {
+        font-size: 1.2rem;
+        padding: 0.75rem;
+        border-radius: 0.5rem;
+        background: #222;
+        border: none;
+        color: #fff;
+        transition: background 0.2s;
+    }
+    .inventory-form-card .btn-success:hover {
+        background: #444;
+        color: #fff;
+    }
+    .form-label, .form-text, .fw-semibold {
+        color: #e0e0e0 !important;
+    }
+    .form-control, select, input[type="datetime-local"] {
+        background: #181818 !important;
+        color: #fff !important;
+        border: 1px solid #444 !important;
+    }
+    .form-control:focus, select:focus, input[type="datetime-local"]:focus {
+        background: #232323 !important;
+        color: #fff !important;
+        border-color: #888 !important;
+        box-shadow: 0 0 0 0.2rem #4444;
+    }
+    .inventory-card-row {
+        border-radius: 1rem;
+        box-shadow: 0 2px 12px rgba(0,0,0,0.18);
+        border: 1px solid #232323;
+        background: #232323;
+        color: #fff;
+        margin-bottom: 1.5rem;
+        padding: 1.5rem 2rem;
+        display: flex;
+        align-items: flex-start;
+        transition: box-shadow 0.2s, border 0.2s;
+        flex-direction: row;
+        flex-wrap: wrap;
+    }
+    .inventory-card-row:hover {
+        box-shadow: 0 8px 32px #0005;
+        border: 1.5px solid #888;
+    }
+    .inventory-card-title {
+        font-size: 1.3rem;
+        color: #fff;
+        font-weight: 700;
+        margin-bottom: 0.25rem;
+    }
+    .inventory-card-subtitle {
+        font-size: 0.95rem;
+        color: #aaa;
+        margin-bottom: 0.5rem;
+    }
+    .inventory-card-main {
+        min-width: 220px;
+        max-width: 260px;
+        margin-right: 2.5rem;
+    }
+    .inventory-card-details {
+        flex: 1;
+        width: 100%;
+    }
+    .inventory-card-row-inner {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 2.5rem;
+        align-items: center;
+        margin-bottom: 0.5rem;
+    }
+    .inventory-card-detail {
+        min-width: 160px;
+        margin-bottom: 0.25rem;
+    }
+    .badge {
+        font-size: 1rem;
+        padding: 0.5em 0.8em;
+        border-radius: 0.5em;
+        background: #111;
+        color: #fff;
+        border: 1px solid #444;
+    }
+    .bg-success { background: #222 !important; color: #b6ffb6 !important; border: 1px solid #2e4 !important; }
+    .bg-secondary { background: #444 !important; color: #bbb !important; }
+    .bg-info { background: #222 !important; color: #b6eaff !important; border: 1px solid #2ef !important; }
+    .bg-primary { background: #222 !important; color: #b6c7ff !important; border: 1px solid #26f !important; }
+    .alert-info {
+        background: #232323;
+        color: #bbb;
+        border: 1px solid #444;
+    }
+    hr {
+        border-top: 1px solid #333;
+    }
+    @media (max-width: 991px) {
+        .inventory-card-row-inner {
+            gap: 1.2rem;
+        }
+        .inventory-card-row {
+            flex-direction: column;
+            align-items: flex-start;
+            padding: 1.2rem 1rem;
+        }
+        .inventory-card-main {
+            margin-right: 0;
+            margin-bottom: 1rem;
+        }
+    }
+    @media (max-width: 767px) {
+        .inventory-header { font-size: 2rem; }
+        .inventory-card-row { padding: 1rem 0.5rem; }
+        .inventory-card-row-inner { gap: 0.7rem; }
+    }
+</style>
+
+<div class="container py-5">
+    <div class="row justify-content-center">
+        <div class="col-lg-10">
+            <h1 class="inventory-header text-center fw-bold">User Inventory</h1>
+
+            <!-- Add Inventory Form -->
+            <div class="card inventory-form-card shadow-sm mb-5">
+                <div class="card-header text-white">
+                    <h5 class="mb-0 fw-semibold">Add to Inventory</h5>
+                </div>
+                <div class="card-body">
+                    <form method="post" action="{% url 'add_user_inventory' %}">
+                        {% csrf_token %}
+                        <div class="row g-4">
+                            {% for field in form %}
+                                <div class="col-md-6">
+                                    <div class="mb-2">
+                                        <label for="{{ field.id_for_label }}" class="form-label fw-semibold">{{ field.label }}</label>
+                                            {{ field }}
+                                            {% if field.help_text %}
+                                                <div class="form-text">{{ field.help_text }}</div>
+                                            {% endif %}
+                                            {% for error in field.errors %}
+                                                <div class="text-danger small">{{ error }}</div>
+                                            {% endfor %}
+                                    </div>
+                                </div>
+                            {% endfor %}
+                        </div>
+                        <div class="d-grid mt-4">
+                            <button type="submit" class="btn btn-success btn-lg shadow-sm">Add to Inventory</button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+
+            <hr class="mb-5">
+
+            <!-- Inventory List -->
+            <div class="inventory-list">
+                {% for item in inventory %}
+                <div class="inventory-card-row">
+                    <div class="inventory-card-main">
+                        <div class="inventory-card-title">{{ item.case_bought.name }}</div>
+                        <div class="inventory-card-subtitle">Hash: <span class="text-monospace">{{ item.case_bought.hash_search }}</span></div>
+                    </div>
+                    <div class="inventory-card-details">
+                        <div class="inventory-card-row-inner">
+                            <div class="inventory-card-detail">
+                                <span class="fw-semibold">Current Price:</span>
+                                {% if item.case_bought.price %}
+                                    <span class="badge bg-success ms-1">${{ item.case_bought.price }}</span>
+                                {% else %}
+                                    <span class="badge bg-secondary ms-1">N/A</span>
+                                {% endif %}
+                            </div>
+                            <div class="inventory-card-detail">
+                                <span class="fw-semibold">Buy Price:</span>
+                                {% if item.buy_price %}
+                                    <span class="badge bg-primary ms-1">${{ item.buy_price }}</span>
+                                {% else %}
+                                    <span class="badge bg-secondary ms-1">N/A</span>
+                                {% endif %}
+                            </div>
+                            <div class="inventory-card-detail">
+                                <span class="fw-semibold">Amount Owned:</span>
+                                <span class="badge bg-info text-dark ms-1">{{ item.ammount }}</span>
+                            </div>
+                        </div>
+                        <div class="inventory-card-row-inner">
+                            <div class="inventory-card-detail">
+                                <span class="fw-semibold">Last Price Update:</span>
+                                <span class="ms-1">{{ item.case_bought.last_price_update|date:"Y-m-d H:i" }}</span>
+                            </div>
+                            <div class="inventory-card-detail">
+                                <span class="fw-semibold">Buy Date:</span>
+                                <span class="ms-1">{{ item.buy_date|date:"Y-m-d H:i" }}</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                {% empty %}
+                <div class="col-12">
+                    <div class="alert alert-info text-center shadow-sm">No items in your inventory.</div>
+                </div>
+                {% endfor %}
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
