@@ -1,6 +1,8 @@
 {% extends "base.html" %}
 
 {% block content %}
+
+{% load math_filters %}
 <style>
     body {
         background: #181818 !important;
@@ -119,6 +121,40 @@
         color: #bbb;
         border: 1px solid #444;
     }
+
+    .card-actions-dropdown {
+    position: absolute;
+    top: 1.5rem;
+    right: 2rem;
+    z-index: 10;
+}
+.card-actions-btn {
+    background: none;
+    border: none;
+    color: #bbb;
+    font-size: 1.5rem;
+    padding: 0 0.5rem;
+    cursor: pointer;
+    transition: color 0.2s;
+}
+.card-actions-btn:hover {
+    color: #fff;
+}
+.dropdown-menu {
+    background: #232323;
+    border: 1px solid #444;
+    border-radius: 0.5rem;
+    min-width: 7rem;
+    box-shadow: 0 2px 8px #0005;
+}
+.dropdown-item {
+    color: #fff;
+    transition: background 0.2s, color 0.2s;
+}
+.dropdown-item:hover, .dropdown-item:focus {
+    background: #444;
+    color: #fff;
+}
     hr {
         border-top: 1px solid #333;
     }
@@ -139,52 +175,165 @@
     @media (max-width: 767px) {
         .inventory-header { font-size: 2rem; }
         .inventory-card-row { padding: 1rem 0.5rem; }
-        .inventory-card-row-inner { gap: 0.7rem; }
+        .inventory-card
+        -row-inner { gap: 0.7rem; }
     }
+    input::placeholder {
+    color: #fff !important;
+    opacity: 1 !important;
+}
+
+.profit-badge {
+    background: #1a3d1a !important;
+    color: #b6ffb6 !important;
+    border: 1px solid #2e4 !important;
+}
+.loss-badge {
+    background: #3d1a1a !important;
+    color: #ffb6b6 !important;
+    border: 1px solid #a44 !important;
+}
+
+
 </style>
+
+<!-- Modal for Add Inventory Form -->
+<div class="modal fade" id="addInventoryModal" tabindex="-1" aria-labelledby="addInventoryModalLabel" aria-hidden="true">
+  <div class="modal-dialog modal-lg modal-dialog-centered">
+    <div class="modal-content" style="background:#232323; color:#fff; border-radius:1rem;">
+      <div class="modal-header" style="border-bottom:1px solid #333;">
+        <h5 class="modal-title" id="addInventoryModalLabel">Add to Inventory</h5>
+        <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+      </div>
+      <div class="modal-body">
+        <form method="post" action="{% url 'add_user_inventory' %}">
+          {% csrf_token %}
+          <div class="row g-4">
+            {% for field in form %}
+              <div class="col-md-6">
+                <div class="mb-2">
+                  <label for="{{ field.id_for_label }}" class="form-label fw-semibold">{{ field.label }}</label>
+                  {{ field }}
+                  {% if field.help_text %}
+                    <div class="form-text">{{ field.help_text }}</div>
+                  {% endif %}
+                  {% for error in field.errors %}
+                    <div class="text-danger small">{{ error }}</div>
+                  {% endfor %}
+                </div>
+              </div>
+            {% endfor %}
+          </div>
+          <div class="d-grid mt-4">
+            <button type="submit" class="btn btn-success btn-lg shadow-sm">Add to Inventory</button>
+          </div>
+        </form>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Edit Inventory Modal (dynamic content) -->
+<div class="modal fade" id="editInventoryModal" tabindex="-1" aria-labelledby="editInventoryModalLabel" aria-hidden="true">
+  <div class="modal-dialog modal-lg modal-dialog-centered">
+    <div class="modal-content" style="background:#232323; color:#fff; border-radius:1rem;">
+      <div class="modal-header" style="border-bottom:1px solid #333;">
+        <h5 class="modal-title" id="editInventoryModalLabel">Edit Inventory Item</h5>
+        <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+      </div>
+      <div class="modal-body" id="editInventoryModalBody">
+        <form id="editInventoryForm">
+    <div class="mb-3">
+        <label class="form-label">Buy Price</label>
+        <input type="number" step="0.01" class="form-control" name="buy_price" id="edit-buy-price">
+    </div>
+    <div class="mb-3">
+        <label class="form-label">Amount Owned</label>
+        <input type="number" class="form-control" name="ammount" id="edit-ammount">
+    </div>
+    <div class="mb-3">
+        <label class="form-label">Buy Date</label>
+        <input type="datetime-local" class="form-control" name="buy_date" id="edit-buy-date">
+    </div>
+    <!-- Add more fields as needed -->
+    <button type="submit" class="btn btn-success">Save Changes</button>
+</form>
+        <!-- Form will be loaded here by JS -->
+        <div class="text-center py-5">
+          <div class="spinner-border text-light" role="status"></div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
 
 <div class="container py-5">
     <div class="row justify-content-center">
         <div class="col-lg-10">
             <h1 class="inventory-header text-center fw-bold">User Inventory</h1>
 
-            <!-- Add Inventory Form -->
-            <div class="card inventory-form-card shadow-sm mb-5">
-                <div class="card-header text-white">
-                    <h5 class="mb-0 fw-semibold">Add to Inventory</h5>
-                </div>
-                <div class="card-body">
-                    <form method="post" action="{% url 'add_user_inventory' %}">
-                        {% csrf_token %}
-                        <div class="row g-4">
-                            {% for field in form %}
-                                <div class="col-md-6">
-                                    <div class="mb-2">
-                                        <label for="{{ field.id_for_label }}" class="form-label fw-semibold">{{ field.label }}</label>
-                                            {{ field }}
-                                            {% if field.help_text %}
-                                                <div class="form-text">{{ field.help_text }}</div>
-                                            {% endif %}
-                                            {% for error in field.errors %}
-                                                <div class="text-danger small">{{ error }}</div>
-                                            {% endfor %}
-                                    </div>
-                                </div>
-                            {% endfor %}
-                        </div>
-                        <div class="d-grid mt-4">
-                            <button type="submit" class="btn btn-success btn-lg shadow-sm">Add to Inventory</button>
-                        </div>
-                    </form>
-                </div>
+            <!-- Button to open modal -->
+            <div class="text-center mb-4">
+                <button class="btn btn-lg"
+                        style="background: linear-gradient(90deg, #232323 60%, #444 100%);
+                               color: #fff;
+                               border: 1px solid #444;
+                               border-radius: 0.5rem;
+                               font-weight: 600;
+                               letter-spacing: 1px;
+                               box-shadow: 0 2px 8px #0003;
+                               transition: background 0.2s, color 0.2s;"
+                        data-bs-toggle="modal"
+                        data-bs-target="#addInventoryModal"
+                        onmouseover="this.style.background='#444'; this.style.color='#fff';"
+                        onmouseout="this.style.background='linear-gradient(90deg, #232323 60%, #444 100%)'; this.style.color='#fff';">
+                    <i class="bi bi-plus-circle" style="margin-right: 0.5rem;"></i>
+                    Add New Case
+                </button>
             </div>
+
+            <!-- Search Bar -->
+            <form method="get" class="mb-4">
+                <div class="input-group">
+                    <input type="text" name="search" class="form-control form-control-lg" 
+                        placeholder="Search by case name..." 
+                        style="color: #fff; background: #181818; border: 1px solid #444;"
+                        value="{{ request.GET.search|default_if_none:'' }}">
+                    <button class="btn btn-outline-light" type="submit">Search</button>
+                </div>
+            </form>
 
             <hr class="mb-5">
 
             <!-- Inventory List -->
             <div class="inventory-list">
                 {% for item in inventory %}
-                <div class="inventory-card-row">
+                <div class="inventory-card-row position-relative">
+                    <!-- 3 dots actions -->
+                    <div class="card-actions-dropdown dropdown">
+                        <button class="card-actions-btn" type="button" id="dropdownMenuButton{{ item.id }}" data-bs-toggle="dropdown" aria-expanded="false">
+                            <i class="bi bi-three-dots-vertical"></i>
+                        </button>
+                        <ul class="dropdown-menu dropdown-menu-end" aria-labelledby="dropdownMenuButton{{ item.id }}">
+                            <li>
+                            <a class="dropdown-item edit-inventory-btn" href="#"
+                            data-edit-url="{% url 'edit_user_inventory' item.id %}"
+                            data-buy_price="{{ item.buy_price }}"
+                            data-ammount="{{ item.ammount }}"
+                            data-buy_date="{{ item.buy_date|date:'Y-m-d\\TH:i' }}">
+                                <i class="bi bi-pencil-square me-2"></i>Edit
+                            </a>
+                            </li>
+                            <li>
+                                <form method="post" action="{% url 'delete_user_inventory' item.id %}" style="display:inline;">
+                                    {% csrf_token %}
+                                    <button type="submit" class="dropdown-item" onclick="return confirm('Are you sure you want to delete this item?');">
+                                        <i class="bi bi-trash me-2"></i>Delete
+                                    </button>
+                                </form>
+                            </li>
+                        </ul>
+                    </div>
                     <div class="inventory-card-main">
                         <div class="inventory-card-title">{{ item.case_bought.name }}</div>
                         <div class="inventory-card-subtitle">Hash: <span class="text-monospace">{{ item.case_bought.hash_search }}</span></div>
@@ -212,6 +361,42 @@
                                 <span class="badge bg-info text-dark ms-1">{{ item.ammount }}</span>
                             </div>
                         </div>
+<br>
+                        <div class="inventory-card-detail">
+                            <span class="fw-semibold">Profit/Loss:</span>
+                            {% if item.buy_price and item.case_bought.price %}
+                                {% with diff=item.case_bought.price|float_subtract:item.buy_price %}
+                                    {% if diff > 0 %}
+                                        <span class="badge profit-badge ms-1">
+                                            +${{ diff|floatformat:2 }}
+                                        </span>
+                                    {% elif diff < 0 %}
+                                        <span class="badge loss-badge ms-1">
+                                            -${{ diff|absval|floatformat:2 }}
+                                        </span>
+                                    {% else %}
+                                        <span class="badge bg-secondary ms-1">0</span>
+                                    {% endif %}
+                                    <!-- Total Profit/Loss -->
+                                    {% with total=diff|mul:item.ammount %}
+                                        {% if total > 0 %}
+                                            <span class="badge profit-badge ms-1">
+                                                Total: +${{ total|floatformat:2 }}
+                                            </span>
+                                        {% elif total < 0 %}
+                                            <span class="badge loss-badge ms-1">
+                                                Total: -${{ total|absval|floatformat:2 }}
+                                            </span>
+                                        {% else %}
+                                            <span class="badge bg-secondary ms-1">Total: 0</span>
+                                        {% endif %}
+                                    {% endwith %}
+                                {% endwith %}
+                            {% else %}
+                                <span class="badge bg-secondary ms-1">N/A</span>
+                            {% endif %}
+                        </div>
+                        <br>
                         <div class="inventory-card-row-inner">
                             <div class="inventory-card-detail">
                                 <span class="fw-semibold">Last Price Update:</span>
@@ -233,4 +418,74 @@
         </div>
     </div>
 </div>
+
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    document.querySelectorAll('.edit-inventory-btn').forEach(function(btn) {
+        btn.addEventListener('click', function(e) {
+            e.preventDefault();
+            var editUrl = this.getAttribute('data-edit-url');
+            var buyPrice = this.getAttribute('data-buy_price') || '';
+            var ammount = this.getAttribute('data-ammount') || '';
+            var buyDate = this.getAttribute('data-buy_date') || '';
+            var modal = new bootstrap.Modal(document.getElementById('editInventoryModal'));
+            var modalBody = document.getElementById('editInventoryModalBody');
+            modalBody.innerHTML = `
+                <form id="editInventoryForm">
+                    <div class="mb-3">
+                        <label class="form-label">Buy Price</label>
+                        <input type="number" step="0.01" class="form-control" name="buy_price" id="edit-buy-price" value="${buyPrice}">
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">Amount Owned</label>
+                        <input type="number" class="form-control" name="ammount" id="edit-ammount" value="${ammount}">
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">Buy Date</label>
+                        <input type="datetime-local" class="form-control" name="buy_date" id="edit-buy-date" value="${buyDate}">
+                    </div>
+                    <button type="submit" class="btn btn-success">Save Changes</button>
+                </form>
+            `;
+            modal.show();
+
+            document.getElementById('editInventoryForm').onsubmit = function(ev) {
+                ev.preventDefault();
+                const buy_price = document.getElementById('edit-buy-price').value;
+                const ammount = document.getElementById('edit-ammount').value;
+                const buy_date = document.getElementById('edit-buy-date').value;
+                fetch(editUrl, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'X-Requested-With': 'XMLHttpRequest',
+                        'X-CSRFToken': '{{ csrf_token }}'
+                    },
+                    body: JSON.stringify({
+                        buy_price: buy_price,
+                        ammount: ammount,
+                        buy_date: buy_date
+                    })
+                })
+                .then(response => response.json())
+                .then(data => {
+                    if (data.success) {
+                        modal.hide();
+                        location.reload();
+                    } else {
+                        alert('Error saving changes');
+                    }
+                });
+            };
+        });
+    });
+});
+
+</script>
+
+
+
 {% endblock %}
+
+

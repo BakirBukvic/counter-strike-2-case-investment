@@ -23,7 +23,8 @@ class CurrentCase(models.Model):
         if price_changed and self.price is not None:
             from .models import CasePriceHistory
             CasePriceHistory.objects.create(case=self, price=self.price)
-
+    def __str__(self):
+        return self.name
 
 
 class CasePriceHistory(models.Model):
